@@ -10,7 +10,9 @@ if ('serviceWorker' in navigator) {
   const fileInput = $('fileInput'), fileName = $('fileName');
   const chrome = $('chrome'), gestureLayer = $('gestureLayer');
   const boostRing = $('boostRing');
-  const seek = $('seek'), timeCur = $('timeCur'), timeDur = $('timeDur');
+  const seek = $('seekTrack'), seekFill = $('seekFill'), seekThumb = $('seekThumb');
+  const seekSpinner = $('seekSpinner');
+  const timeCur = $('timeCur'), timeDur = $('timeDur');
   const playPauseBtn = $('playPause'), playPauseUse = $('playPauseUse');
   const speedSelect = $('speedSelect'), skipSelect = $('skipSelect');
   const volumeSlider = $('volume'), muteBtn = $('muteBtn'), muteUse = $('muteUse');
@@ -22,16 +24,34 @@ if ('serviceWorker' in navigator) {
   const audioMode = $('audioMode'), audioTitle = $('audioTitle');
   const toast = $('toast');
   const lockBtn = $('lockBtn'), unlockBtn = $('unlockBtn');
+  const settingsBtn = $('settingsBtn'), settingsClose = $('settingsClose');
+  const settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop');
+  const resetExposureBtn = $('resetExposureBtn');
+  const accentColor = $('accentColor'), accentColorLabel = $('accentColorLabel'), resetAccentBtn = $('resetAccentBtn');
 
   let baseRate = 1;
   let skipSeconds = 10;
-  let isSeeking = false;
   let hideTimer = null;
   let holdTimer = null;
   let isHolding = false;
   let isLocked = false;
+  let seekDragging = false;
   let pointerDownTime = 0;
   let toastTimer = null;
+
+  const DEFAULT_ACCENT = '#f2a93b';
+
+  function hexToRgb(hex){
+    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if(!m) return '242,169,59';
+    return `${parseInt(m[1],16)}, ${parseInt(m[2],16)}, ${parseInt(m[3],16)}`;
+  }
+  function applyAccent(hex){
+    document.documentElement.style.setProperty('--amber', hex);
+    document.documentElement.style.setProperty('--amber-rgb', hexToRgb(hex));
+    accentColor.value = hex;
+    accentColorLabel.textContent = hex.toUpperCase();
+  }
 
   function fmt(s){
     if(!isFinite(s)) return '0:00';
@@ -56,6 +76,7 @@ if ('serviceWorker' in navigator) {
       if(s.contrast) contrastSlider.value = s.contrast;
       if(s.volume !== undefined) volumeSlider.value = s.volume;
       if(s.skipSeconds){ skipSeconds = s.skipSeconds; skipSelect.value = String(skipSeconds); }
+      if(s.accent){ applyAccent(s.accent); }
       applyFilter();
     }catch(e){}
   }
@@ -63,10 +84,11 @@ if ('serviceWorker' in navigator) {
     try{
       localStorage.setItem('offlinePlayerSettings', JSON.stringify({
         brightness: brightnessSlider.value, contrast: contrastSlider.value, volume: volumeSlider.value,
-        skipSeconds: skipSeconds
+        skipSeconds: skipSeconds, accent: accentColor.value
       }));
     }catch(e){}
   }
+  loadSettings(); // apply persisted accent color etc. right away, not just after picking a file
 
   function applyFilter(){
     video.style.filter = `brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%)`;
@@ -108,26 +130,49 @@ if ('serviceWorker' in navigator) {
   video.addEventListener('pause', () => { playPauseUse.setAttribute('href', '#icon-play'); showChrome(); });
   playPauseBtn.addEventListener('click', togglePlay);
 
-  // Time / seek
+  // Time / seek — custom scrubber: dragging the thumb is the only way to seek,
+  // tapping elsewhere on the track does nothing.
   video.addEventListener('loadedmetadata', () => { timeDur.textContent = fmt(video.duration); });
   video.addEventListener('timeupdate', () => {
-    if(isSeeking) return;
+    if(seekDragging) return;
     timeCur.textContent = fmt(video.currentTime);
-    const pct = video.duration ? (video.currentTime/video.duration)*1000 : 0;
-    seek.value = pct;
-    seek.style.setProperty('--seekPct', (pct/10) + '%');
+    const pct = video.duration ? (video.currentTime/video.duration)*100 : 0;
+    seekFill.style.width = pct + '%';
+    seekThumb.style.left = pct + '%';
   });
-  seek.addEventListener('input', () => {
-    isSeeking = true;
-    const t = (seek.value/1000) * (video.duration || 0);
-    timeCur.textContent = fmt(t);
-    seek.style.setProperty('--seekPct', (seek.value/10) + '%');
+
+  function pctFromPointer(e){
+    const rect = seek.getBoundingClientRect();
+    let pct = ((e.clientX - rect.left) / rect.width) * 100;
+    return Math.max(0, Math.min(100, pct));
+  }
+
+  seekThumb.addEventListener('pointerdown', e => {
+    seekDragging = true;
+    seekThumb.setPointerCapture(e.pointerId);
   });
-  seek.addEventListener('change', () => {
-    const t = (seek.value/1000) * (video.duration || 0);
-    video.currentTime = t;
-    isSeeking = false;
+  seekThumb.addEventListener('pointermove', e => {
+    if(!seekDragging) return;
+    const pct = pctFromPointer(e);
+    seekFill.style.width = pct + '%';
+    seekThumb.style.left = pct + '%';
+    timeCur.textContent = fmt((pct/100) * (video.duration || 0));
   });
+  function finishSeekDrag(e){
+    if(!seekDragging) return;
+    seekDragging = false;
+    const pct = pctFromPointer(e);
+    video.currentTime = (pct/100) * (video.duration || 0);
+  }
+  seekThumb.addEventListener('pointerup', finishSeekDrag);
+  seekThumb.addEventListener('pointercancel', () => { seekDragging = false; });
+
+  // Loading indicator for the brief stall that can happen on seek
+  video.addEventListener('seeking', () => seekSpinner.classList.add('show'));
+  video.addEventListener('seeked', () => seekSpinner.classList.remove('show'));
+  video.addEventListener('waiting', () => seekSpinner.classList.add('show'));
+  video.addEventListener('playing', () => seekSpinner.classList.remove('show'));
+  video.addEventListener('canplay', () => seekSpinner.classList.remove('show'));
 
   function flash(el, text){
     if(text !== undefined) el.textContent = text;
@@ -165,6 +210,22 @@ if ('serviceWorker' in navigator) {
   // Brightness / contrast
   brightnessSlider.addEventListener('input', () => { applyFilter(); saveSettings(); });
   contrastSlider.addEventListener('input', () => { applyFilter(); saveSettings(); });
+  resetExposureBtn.addEventListener('click', () => {
+    brightnessSlider.value = 100;
+    contrastSlider.value = 100;
+    applyFilter();
+    saveSettings();
+  });
+
+  accentColor.addEventListener('input', () => { applyAccent(accentColor.value); saveSettings(); });
+  resetAccentBtn.addEventListener('click', () => { applyAccent(DEFAULT_ACCENT); saveSettings(); });
+
+  // Settings menu
+  function openSettings(){ settingsPanel.classList.add('open'); }
+  function closeSettings(){ settingsPanel.classList.remove('open'); }
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsBackdrop.addEventListener('click', closeSettings);
 
   // Loop
   loopBtn.addEventListener('click', () => {

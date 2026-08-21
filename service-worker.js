@@ -1,4 +1,4 @@
-const CACHE_NAME = 'offline-player-v2';
+const CACHE_NAME = 'offline-player-v4';
 const ASSETS = [
   './',
   './index.html',

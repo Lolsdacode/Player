@@ -35,6 +35,9 @@
   <symbol id="icon-repeat" viewBox="0 0 24 24"><path fill="currentColor" d="M7 7h10v3l4-4-4-4v3H5v6h2V7z"/><path fill="currentColor" d="M17 17H7v-3l-4 4 4 4v-3h14v-6h-2v4z"/></symbol>
   <symbol id="icon-music" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="18" cy="16" r="3" fill="currentColor"/></symbol>
   <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="icon-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.4 7.4 0 0 0 .1-1 7.4 7.4 0 0 0-.1-1l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.4a.5.5 0 0 0-.6-.2l-2.5 1a7.6 7.6 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.4a.5.5 0 0 0 .1.6L4.5 11a7.4 7.4 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.4a.5.5 0 0 0 .6.2l2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.4a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></symbol>
+  <symbol id="icon-close" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="icon-reset" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></symbol>
 </svg>
 
 <div id="app">
@@ -46,7 +49,7 @@
     <label class="picker-btn" for="fileInput">
       <svg class="icon"><use href="#icon-folder"></use></svg> Choose File
     </label>
-    <input type="file" id="fileInput" accept="video/*,audio/*">
+    <input type="file" id="fileInput" accept="video/*,audio/*,.mp3,.m4a,.wav,.aac,.flac,.ogg,.mov,.mp4">
   </div>
 
   <div id="player">
@@ -57,6 +60,7 @@
     </div>
     <div id="gestureLayer"></div>
     <div id="boostRing">2×</div>
+    <div id="seekSpinner"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke-width="3" stroke-linecap="round"/></svg></div>
     <div id="seekFlash" class="left">-10s</div>
     <div id="seekFlash" class="right" style="display:none">+10s</div>
     <div id="toast"></div>
@@ -72,6 +76,7 @@
       <div id="topBar">
         <span id="fileName">video.mp4</span>
         <div id="topBtns">
+          <button class="iconBtn" id="settingsBtn" title="Settings"><svg class="icon"><use href="#icon-settings"></use></svg></button>
           <button class="iconBtn" id="lockBtn" title="Lock screen"><svg class="icon"><use href="#icon-lock"></use></svg></button>
           <button class="iconBtn" id="fullscreenBtn" title="Fullscreen"><svg class="icon"><use href="#icon-expand"></use></svg></button>
           <button class="iconBtn" id="changeBtn" title="Choose another file"><svg class="icon"><use href="#icon-folder"></use></svg></button>
@@ -81,7 +86,10 @@
       <div id="bottomBar">
         <div id="scrubRow">
           <span id="timeCur" class="mono">0:00</span>
-          <input type="range" id="seek" min="0" max="1000" value="0">
+          <div id="seekTrack">
+            <div id="seekFill"></div>
+            <div id="seekThumb"></div>
+          </div>
           <span id="timeDur" class="mono">0:00</span>
         </div>
 
@@ -90,9 +98,19 @@
           <button id="playPause"><svg class="icon lgIcon"><use id="playPauseUse" href="#icon-play"></use></svg></button>
           <button id="fwd10"><svg class="icon lgIcon"><use href="#icon-skip-forward"></use></svg></button>
         </div>
+      </div>
+    </div>
 
-        <div class="groupsScroll">
-          <div class="group">
+    <div id="settingsPanel">
+      <div id="settingsBackdrop"></div>
+      <div id="settingsSheet">
+        <div id="settingsHeader">
+          <span>Settings</span>
+          <button class="iconBtn" id="settingsClose"><svg class="icon"><use href="#icon-close"></use></svg></button>
+        </div>
+        <div id="settingsBody">
+
+          <div class="group full">
             <p class="eyebrow">Speed</p>
             <div class="selectWrap">
               <select id="speedSelect">
@@ -107,7 +125,7 @@
             <p class="hint">Press &amp; hold anywhere on the video for a temporary 2× boost.</p>
           </div>
 
-          <div class="group">
+          <div class="group full">
             <p class="eyebrow">Skip Amount</p>
             <div class="selectWrap">
               <select id="skipSelect">
@@ -121,7 +139,7 @@
             <p class="hint">Used by the skip buttons and double-tapping the edges of the screen.</p>
           </div>
 
-          <div class="group">
+          <div class="group full">
             <p class="eyebrow">Volume</p>
             <div class="miniRow">
               <svg class="icon smallIcon"><use href="#icon-volume"></use></svg>
@@ -131,7 +149,7 @@
             <p class="hint">iPhone locks this to your hardware buttons — this slider mainly helps on desktop.</p>
           </div>
 
-          <div class="group">
+          <div class="group full">
             <p class="eyebrow">Exposure</p>
             <div class="miniRow">
               <svg class="icon smallIcon"><use href="#icon-sun"></use></svg>
@@ -141,13 +159,24 @@
               <svg class="icon smallIcon"><use href="#icon-contrast"></use></svg>
               <input type="range" id="contrast" min="50" max="150" value="100">
             </div>
+            <button class="toggleBtn" id="resetExposureBtn"><svg class="icon smallIcon"><use href="#icon-reset"></use></svg><span>Reset to normal</span></button>
             <p class="hint">Adjusts the picture itself, not your screen's hardware brightness.</p>
           </div>
 
-          <div class="group">
+          <div class="group full">
             <p class="eyebrow">Loop</p>
             <button class="toggleBtn" id="loopBtn"><svg class="icon smallIcon"><use href="#icon-repeat"></use></svg><span>Off</span></button>
           </div>
+
+          <div class="group full">
+            <p class="eyebrow">Accent Color</p>
+            <div class="miniRow">
+              <input type="color" id="accentColor" value="#f2a93b">
+              <span class="miniLabel" id="accentColorLabel">#F2A93B</span>
+            </div>
+            <button class="toggleBtn" id="resetAccentBtn"><svg class="icon smallIcon"><use href="#icon-reset"></use></svg><span>Reset to default</span></button>
+          </div>
+
         </div>
       </div>
     </div>

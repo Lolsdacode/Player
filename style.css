@@ -6,6 +6,7 @@
   --ink:#f5f1e8;
   --ink-dim: rgba(245,241,232,0.55);
   --amber:#f2a93b;
+  --amber-rgb: 242,169,59;
   --amber-dim:#c97f1e;
   --danger:#e1574b;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -57,13 +58,13 @@ video{
 #audioMode{
   position:absolute; inset:0; z-index:2; display:none; flex-direction:column;
   align-items:center; justify-content:center; gap:18px; background:
-    radial-gradient(circle at 50% 40%, rgba(242,169,59,0.10), transparent 60%), #000;
+    radial-gradient(circle at 50% 40%, rgba(var(--amber-rgb),0.10), transparent 60%), #000;
 }
 #audioMode.active{ display:flex; }
 #audioIcon{
   width:140px; height:140px; border-radius:50%; border:3px solid var(--amber);
   display:flex; align-items:center; justify-content:center; color:var(--amber);
-  box-shadow:0 0 40px rgba(242,169,59,0.18);
+  box-shadow:0 0 40px rgba(var(--amber-rgb),0.18);
 }
 #audioTitle{ font-family:var(--mono); font-size:14px; color:var(--ink-dim); max-width:80vw;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -88,9 +89,19 @@ video{
   display:flex; align-items:center; justify-content:center;
   font-family:var(--mono); font-size:22px; font-weight:700; color:var(--amber);
   opacity:0; pointer-events:none; transition:opacity .12s ease, transform .12s ease;
-  z-index:9; box-shadow:0 0 24px rgba(242,169,59,0.35);
+  z-index:9; box-shadow:0 0 24px rgba(var(--amber-rgb),0.35);
 }
 #boostRing.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+
+#seekSpinner{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:44px; height:44px; opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:9;
+  color:var(--amber);
+}
+#seekSpinner.show{ opacity:1; }
+#seekSpinner svg{ width:100%; height:100%; animation:spin .8s linear infinite; }
+#seekSpinner circle{ stroke:currentColor; stroke-dasharray:40 100; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
 
 #seekFlash{
   position:absolute; top:50%; transform:translateY(-50%); font-family:var(--mono);
@@ -130,6 +141,26 @@ video{
 #scrubRow{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
 #timeCur, #timeDur{ font-family:var(--mono); font-size:12px; color:var(--ink-dim); min-width:42px; }
 #timeDur{ text-align:right; }
+
+/* custom scrubber: track ignores taps, only the thumb responds to drag */
+#seekTrack{ position:relative; flex:1; height:28px; }
+#seekTrack::before{
+  content:''; position:absolute; left:0; right:0; top:50%; height:4px; transform:translateY(-50%);
+  background:rgba(255,255,255,0.25); border-radius:2px; pointer-events:none;
+}
+#seekFill{
+  position:absolute; left:0; top:50%; height:4px; width:0%; transform:translateY(-50%);
+  background:var(--amber); border-radius:2px; pointer-events:none;
+}
+#seekThumb{
+  position:absolute; top:50%; left:0%; width:28px; height:28px; transform:translate(-50%,-50%);
+  touch-action:none;
+}
+#seekThumb::after{
+  content:''; position:absolute; inset:6px; border-radius:50%; background:var(--amber);
+  box-shadow:0 0 0 4px rgba(var(--amber-rgb),0.18);
+}
+
 input[type=range]{
   -webkit-appearance:none; appearance:none; height:28px; background:transparent; flex:1;
 }
@@ -138,19 +169,18 @@ input[type=range]::-webkit-slider-runnable-track{
 }
 input[type=range]::-webkit-slider-thumb{
   -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--amber);
-  margin-top:-6px; box-shadow:0 0 0 4px rgba(242,169,59,0.18);
+  margin-top:-6px; box-shadow:0 0 0 4px rgba(var(--amber-rgb),0.18);
 }
-#seek::-webkit-slider-runnable-track{ background: linear-gradient(to right, var(--amber) var(--seekPct,0%), rgba(255,255,255,0.25) 0); }
 
 #mainControls{ display:flex; align-items:center; justify-content:center; gap:28px; margin-bottom:14px; }
 #mainControls button{ background:none; border:none; color:var(--ink); padding:6px; display:flex; align-items:center; justify-content:center; }
 
-.groupsScroll{ display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }
 .group{
-  background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:10px 12px;
-  min-width:150px; flex:0 0 auto;
+  background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:12px 14px;
 }
+.group.full{ width:100%; }
 .group .eyebrow{ margin-bottom:8px; }
+.group + .group{ margin-top:0; }
 
 /* dropdowns */
 .selectWrap{ position:relative; }
@@ -169,12 +199,36 @@ select:focus{ outline:2px solid var(--amber); outline-offset:1px; }
 .miniRow input[type=range]{ height:20px; }
 .miniRow input[type=range]::-webkit-slider-thumb{ width:14px; height:14px; margin-top:-5px; }
 .miniRow .icon{ color:var(--ink-dim); }
+input[type=color]{
+  width:44px; height:34px; border:1px solid var(--line); border-radius:8px; background:none; padding:0;
+}
+input[type=color]::-webkit-color-swatch-wrapper{ padding:2px; }
+input[type=color]::-webkit-color-swatch{ border:none; border-radius:6px; }
 .toggleBtn{
   font-family:var(--sans); font-size:12px; padding:6px 10px; border-radius:8px; border:1px solid var(--line);
   background:transparent; color:var(--ink-dim); display:flex; align-items:center; gap:6px;
 }
 .toggleBtn.on{ background:var(--amber); color:#1a1200; border-color:var(--amber); font-weight:700; }
 .hint{ font-size:10px; color:var(--ink-dim); opacity:.6; margin-top:6px; line-height:1.4; }
+
+/* ---------- Settings menu ---------- */
+#settingsPanel{ position:absolute; inset:0; z-index:14; display:none; }
+#settingsPanel.open{ display:block; }
+#settingsBackdrop{ position:absolute; inset:0; background:rgba(0,0,0,0.55); }
+#settingsSheet{
+  position:absolute; left:0; right:0; bottom:0; max-height:80vh; display:flex; flex-direction:column;
+  background:#14151b; border-top-left-radius:20px; border-top-right-radius:20px;
+  border:1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
+  box-shadow:0 -8px 30px rgba(0,0,0,0.4);
+}
+#settingsHeader{
+  display:flex; align-items:center; justify-content:space-between; padding:16px 16px 8px;
+  font-weight:700; font-size:15px; flex-shrink:0;
+}
+#settingsBody{
+  display:flex; flex-direction:column; gap:12px; padding:4px 16px 20px;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+}
 
 /* ---------- Lock screen ---------- */
 #lockOverlay{
