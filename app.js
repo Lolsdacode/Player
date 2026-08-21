@@ -103,6 +103,7 @@ if ('serviceWorker' in navigator) {
     fileName.textContent = file.name;
     picker.style.display = 'none';
     playerEl.classList.add('active');
+    resetZoom();
 
     const isAudio = file.type.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(file.name);
     audioMode.classList.toggle('active', isAudio);
@@ -244,15 +245,34 @@ if ('serviceWorker' in navigator) {
   });
 
   // Lock screen
+  let lockFadeTimer = null;
+  function scheduleLockFade(){
+    clearTimeout(lockFadeTimer);
+    lockFadeTimer = setTimeout(() => unlockBtn.classList.add('faded'), 3000);
+  }
+  function revealLockIndicator(){
+    unlockBtn.classList.remove('faded');
+    scheduleLockFade();
+  }
+
   lockBtn.addEventListener('click', () => {
     isLocked = true;
     playerEl.classList.add('locked');
     chrome.classList.add('hidden');
     clearTimeout(hideTimer);
+    revealLockIndicator();
   });
+  const lockOverlay = $('lockOverlay');
+  lockOverlay.addEventListener('pointerdown', e => {
+    const wasFaded = unlockBtn.classList.contains('faded');
+    revealLockIndicator();
+    if(wasFaded){ e.preventDefault(); } // first tap while faded just brings it back, doesn't unlock
+  }, true);
   unlockBtn.addEventListener('click', () => {
+    if(unlockBtn.classList.contains('faded')) return;
     isLocked = false;
     playerEl.classList.remove('locked');
+    clearTimeout(lockFadeTimer);
     showChrome();
   });
 
@@ -267,17 +287,84 @@ if ('serviceWorker' in navigator) {
   }
   function scheduleHide(){ showChrome(); }
 
-  // Gesture layer: tap to toggle chrome/play, double-tap sides to seek, hold to boost speed
+  // Gesture layer: tap to toggle chrome, double-tap sides to seek, hold to boost speed,
+  // two-finger pinch to zoom into the video, one-finger drag to pan once zoomed.
   let lastTap = 0;
+  const activePointers = new Map();
+  let zoomScale = 1, originX = 50, originY = 50;
+  let pinchStartDist = 0, pinchStartScale = 1;
+  let panPointerId = null, panStartX = 0, panStartY = 0, panStartOriginX = 50, panStartOriginY = 50;
+  let dragMoved = false;
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  function dist(a, b){ return Math.hypot(a.x - b.x, a.y - b.y); }
+  function applyZoomTransform(){
+    video.style.transformOrigin = originX + '% ' + originY + '%';
+    video.style.transform = zoomScale === 1 ? '' : `scale(${zoomScale})`;
+  }
+  function resetZoom(){
+    zoomScale = 1; originX = 50; originY = 50;
+    video.style.transform = '';
+    video.style.transformOrigin = '';
+  }
+
   gestureLayer.addEventListener('pointerdown', e => {
+    activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+    if(activePointers.size === 2){
+      // a second finger just landed — this is now a pinch, not a tap/hold
+      clearTimeout(holdTimer);
+      isHolding = false;
+      boostRing.classList.remove('show');
+      panPointerId = null;
+      const pts = [...activePointers.values()];
+      pinchStartDist = dist(pts[0], pts[1]) || 1;
+      pinchStartScale = zoomScale;
+      return;
+    }
+    if(activePointers.size > 2) return;
+
     if(isLocked) return;
     pointerDownTime = Date.now();
-    holdTimer = setTimeout(() => {
-      isHolding = true;
-      video.playbackRate = Math.max(baseRate*2, 2);
-      boostRing.textContent = Math.max(baseRate*2,2).toFixed(2).replace(/\.00$/,'') + '×';
-      boostRing.classList.add('show');
-    }, 350);
+    dragMoved = false;
+    if(zoomScale > 1){
+      panPointerId = e.pointerId;
+      panStartX = e.clientX; panStartY = e.clientY;
+      panStartOriginX = originX; panStartOriginY = originY;
+    } else {
+      holdTimer = setTimeout(() => {
+        isHolding = true;
+        video.playbackRate = Math.max(baseRate*2, 2);
+        boostRing.textContent = Math.max(baseRate*2,2).toFixed(2).replace(/\.00$/,'') + '×';
+        boostRing.classList.add('show');
+      }, 350);
+    }
+  });
+
+  gestureLayer.addEventListener('pointermove', e => {
+    if(!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, {x: e.clientX, y: e.clientY});
+
+    if(activePointers.size >= 2){
+      const pts = [...activePointers.values()];
+      const newDist = dist(pts[0], pts[1]) || 1;
+      zoomScale = clamp(pinchStartScale * (newDist / pinchStartDist), 1, 4);
+      const rect = gestureLayer.getBoundingClientRect();
+      const midX = (pts[0].x + pts[1].x) / 2, midY = (pts[0].y + pts[1].y) / 2;
+      originX = clamp(((midX - rect.left) / rect.width) * 100, 0, 100);
+      originY = clamp(((midY - rect.top) / rect.height) * 100, 0, 100);
+      applyZoomTransform();
+      return;
+    }
+
+    if(panPointerId === e.pointerId && zoomScale > 1){
+      const dx = e.clientX - panStartX, dy = e.clientY - panStartY;
+      if(Math.abs(dx) > 6 || Math.abs(dy) > 6) dragMoved = true;
+      const rect = gestureLayer.getBoundingClientRect();
+      originX = clamp(panStartOriginX - (dx / rect.width) * 100 / zoomScale, 0, 100);
+      originY = clamp(panStartOriginY - (dy / rect.height) * 100 / zoomScale, 0, 100);
+      applyZoomTransform();
+    }
   });
 
   function endHold(){
@@ -289,20 +376,31 @@ if ('serviceWorker' in navigator) {
     }
   }
 
+  function releasePointer(e){
+    activePointers.delete(e.pointerId);
+    if(panPointerId === e.pointerId) panPointerId = null;
+  }
+
   gestureLayer.addEventListener('pointerup', e => {
+    const wasPanning = panPointerId === e.pointerId && dragMoved;
+    const stillMultiTouch = activePointers.size > 1;
+    releasePointer(e);
+
+    if(stillMultiTouch) return; // a pinch is still in progress with the remaining finger
+
     const heldFor = Date.now() - pointerDownTime;
     const wasHolding = isHolding;
     endHold(); // always clean up the speed-boost state, even if locked mid-hold
-    if(isLocked) return;
+    if(isLocked || wasPanning) return;
     if(wasHolding || heldFor >= 350) return;
 
     const now = Date.now();
     const width = gestureLayer.clientWidth;
     const x = e.clientX;
     if(now - lastTap < 300){
-      // double tap: seek, doesn't touch chrome visibility
       if(x < width*0.4){ video.currentTime = Math.max(0, video.currentTime-skipSeconds); flash(flashLeft, '-'+skipSeconds+'s'); }
       else if(x > width*0.6){ video.currentTime = Math.min(video.duration||0, video.currentTime+skipSeconds); flash(flashRight, '+'+skipSeconds+'s'); }
+      else if(zoomScale > 1){ resetZoom(); }
       lastTap = 0;
       return;
     }
@@ -311,8 +409,8 @@ if ('serviceWorker' in navigator) {
     if(chrome.classList.contains('hidden')){ showChrome(); }
     else { chrome.classList.add('hidden'); clearTimeout(hideTimer); }
   });
-  gestureLayer.addEventListener('pointercancel', endHold);
-  gestureLayer.addEventListener('pointerleave', endHold);
+  gestureLayer.addEventListener('pointercancel', e => { releasePointer(e); endHold(); });
+  gestureLayer.addEventListener('pointerleave', e => { releasePointer(e); endHold(); });
 
   document.addEventListener('visibilitychange', () => { if(document.hidden) endHold(); });
 })();

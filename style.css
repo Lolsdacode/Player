@@ -71,7 +71,7 @@ video{
 
 /* gesture layer sits BELOW the chrome so buttons/sliders are always reachable;
    taps that miss chrome's controls fall through to here for play/pause & hold-boost */
-#gestureLayer{ position:absolute; inset:0; z-index:3; }
+#gestureLayer{ position:absolute; inset:0; z-index:3; touch-action:none; }
 
 #toast{
   position:absolute; top:calc(env(safe-area-inset-top) + 14px); left:50%; transform:translateX(-50%);
@@ -83,15 +83,16 @@ video{
 
 /* boost ring, the signature element */
 #boostRing{
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%) scale(0.8);
-  width:96px; height:96px; border-radius:50%;
-  background:rgba(0,0,0,0.55); border:2px solid var(--amber);
+  position:absolute; top:calc(env(safe-area-inset-top) + 60px); left:50%;
+  transform:translateX(-50%) scale(0.85);
+  padding:8px 18px; border-radius:999px; width:auto; height:auto;
+  background:rgba(0,0,0,0.6); border:2px solid var(--amber);
   display:flex; align-items:center; justify-content:center;
-  font-family:var(--mono); font-size:22px; font-weight:700; color:var(--amber);
+  font-family:var(--mono); font-size:15px; font-weight:700; color:var(--amber);
   opacity:0; pointer-events:none; transition:opacity .12s ease, transform .12s ease;
-  z-index:9; box-shadow:0 0 24px rgba(var(--amber-rgb),0.35);
+  z-index:9; box-shadow:0 0 20px rgba(var(--amber-rgb),0.3);
 }
-#boostRing.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+#boostRing.show{ opacity:1; transform:translateX(-50%) scale(1); }
 
 #seekSpinner{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
@@ -242,8 +243,9 @@ input[type=color]::-webkit-color-swatch{ border:none; border-radius:6px; }
 #unlockBtn{
   display:flex; align-items:center; gap:8px; background:rgba(20,16,10,0.85); color:var(--ink);
   border:1px solid var(--line); padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600;
-  pointer-events:auto;
+  pointer-events:auto; opacity:1; transition:opacity .4s ease;
 }
+#unlockBtn.faded{ opacity:0; pointer-events:none; }
 
 /* ---------- Landscape / short-viewport safety net ---------- */
 @media (orientation: landscape) and (max-height: 520px){
