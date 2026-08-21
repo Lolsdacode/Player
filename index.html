@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Player">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0b0c10">
+<title>Offline Player</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <div id="picker">
+    <p class="eyebrow">Offline Player</p>
+    <h1>Load a file</h1>
+    <p>Pick a video or MP3 from your Files app. Nothing is uploaded — it plays straight from your phone, no connection needed.</p>
+    <label class="picker-btn" for="fileInput">📂 Choose File</label>
+    <input type="file" id="fileInput" accept="video/*,audio/*">
+  </div>
+
+  <div id="player">
+    <video id="video" playsinline webkit-playsinline></video>
+    <div id="audioMode">
+      <div id="audioIcon">♪</div>
+      <div id="audioTitle">track.mp3</div>
+    </div>
+    <div id="gestureLayer"></div>
+    <div id="boostRing">2×</div>
+    <div id="seekFlash" class="left">-10s</div>
+    <div id="seekFlash" class="right" style="display:none">+10s</div>
+
+    <div id="chrome">
+      <div id="topBar">
+        <span id="fileName">video.mp4</span>
+        <div id="topBtns">
+          <button class="iconBtn" id="fullscreenBtn" title="Fullscreen">⤢</button>
+          <button class="iconBtn" id="changeBtn" title="Choose another file">📂</button>
+        </div>
+      </div>
+
+      <div id="bottomBar">
+        <div id="scrubRow">
+          <span id="timeCur" class="mono">0:00</span>
+          <input type="range" id="seek" min="0" max="1000" value="0">
+          <span id="timeDur" class="mono">0:00</span>
+        </div>
+
+        <div id="mainControls">
+          <button id="back10">⏪</button>
+          <button id="playPause">▶︎</button>
+          <button id="fwd10">⏩</button>
+        </div>
+
+        <div class="groupsScroll">
+          <div class="group">
+            <p class="eyebrow">Speed</p>
+            <div class="chips" id="speedChips">
+              <button class="chip" data-speed="0.5">.5×</button>
+              <button class="chip active" data-speed="1">1×</button>
+              <button class="chip" data-speed="1.25">1.25×</button>
+              <button class="chip" data-speed="1.5">1.5×</button>
+              <button class="chip" data-speed="2">2×</button>
+            </div>
+            <p class="hint">Press &amp; hold anywhere on the video for a temporary 2× boost.</p>
+          </div>
+
+          <div class="group">
+            <p class="eyebrow">Skip Amount</p>
+            <div class="chips" id="skipChips">
+              <button class="chip" data-skip="5">5s</button>
+              <button class="chip active" data-skip="10">10s</button>
+              <button class="chip" data-skip="15">15s</button>
+              <button class="chip" data-skip="30">30s</button>
+            </div>
+            <p class="hint">Used by the skip buttons and double-tapping the edges of the screen.</p>
+          </div>
+
+          <div class="group">
+            <p class="eyebrow">Volume</p>
+            <div class="miniRow">
+              <span class="miniLabel">🔈</span>
+              <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
+            </div>
+            <button class="toggleBtn" id="muteBtn">Mute</button>
+            <p class="hint">iPhone locks this to your hardware buttons — this slider mainly helps on desktop.</p>
+          </div>
+
+          <div class="group">
+            <p class="eyebrow">Exposure</p>
+            <div class="miniRow">
+              <span class="miniLabel">☀︎</span>
+              <input type="range" id="brightness" min="50" max="200" value="100">
+            </div>
+            <div class="miniRow">
+              <span class="miniLabel">◑</span>
+              <input type="range" id="contrast" min="50" max="150" value="100">
+            </div>
+            <p class="hint">Adjusts the picture itself, not your screen's hardware brightness.</p>
+          </div>
+
+          <div class="group">
+            <p class="eyebrow">Loop</p>
+            <button class="toggleBtn" id="loopBtn">Off</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script src="app.js"></script>
+</body>
+</html>
