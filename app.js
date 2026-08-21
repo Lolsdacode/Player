@@ -221,8 +221,8 @@ if ('serviceWorker' in navigator) {
   resetAccentBtn.addEventListener('click', () => { applyAccent(DEFAULT_ACCENT); saveSettings(); });
 
   // Settings menu
-  function openSettings(){ settingsPanel.classList.add('open'); }
-  function closeSettings(){ settingsPanel.classList.remove('open'); }
+  function openSettings(){ clearTimeout(hideTimer); settingsPanel.classList.add('open'); }
+  function closeSettings(){ settingsPanel.classList.remove('open'); showChrome(); }
   settingsBtn.addEventListener('click', openSettings);
   settingsClose.addEventListener('click', closeSettings);
   settingsBackdrop.addEventListener('click', closeSettings);
@@ -290,25 +290,26 @@ if ('serviceWorker' in navigator) {
   }
 
   gestureLayer.addEventListener('pointerup', e => {
-    if(isLocked) return;
     const heldFor = Date.now() - pointerDownTime;
     const wasHolding = isHolding;
-    endHold();
-    if(!wasHolding && heldFor < 350){
-      const now = Date.now();
-      const width = gestureLayer.clientWidth;
-      const x = e.clientX;
-      if(now - lastTap < 300){
-        if(x < width*0.4){ video.currentTime = Math.max(0, video.currentTime-skipSeconds); flash(flashLeft, '-'+skipSeconds+'s'); }
-        else if(x > width*0.6){ video.currentTime = Math.min(video.duration||0, video.currentTime+skipSeconds); flash(flashRight, '+'+skipSeconds+'s'); }
-        lastTap = 0;
-      } else {
-        lastTap = now;
-        if(chrome.classList.contains('hidden')){ showChrome(); }
-        else { togglePlay(); showChrome(); }
-      }
+    endHold(); // always clean up the speed-boost state, even if locked mid-hold
+    if(isLocked) return;
+    if(wasHolding || heldFor >= 350) return;
+
+    const now = Date.now();
+    const width = gestureLayer.clientWidth;
+    const x = e.clientX;
+    if(now - lastTap < 300){
+      // double tap: seek, doesn't touch chrome visibility
+      if(x < width*0.4){ video.currentTime = Math.max(0, video.currentTime-skipSeconds); flash(flashLeft, '-'+skipSeconds+'s'); }
+      else if(x > width*0.6){ video.currentTime = Math.min(video.duration||0, video.currentTime+skipSeconds); flash(flashRight, '+'+skipSeconds+'s'); }
+      lastTap = 0;
+      return;
     }
-    showChrome();
+    lastTap = now;
+    // single tap: only shows/hides the controls, never plays or pauses
+    if(chrome.classList.contains('hidden')){ showChrome(); }
+    else { chrome.classList.add('hidden'); clearTimeout(hideTimer); }
   });
   gestureLayer.addEventListener('pointercancel', endHold);
   gestureLayer.addEventListener('pointerleave', endHold);

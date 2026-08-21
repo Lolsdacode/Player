@@ -76,7 +76,7 @@ video{
 #toast{
   position:absolute; top:calc(env(safe-area-inset-top) + 14px); left:50%; transform:translateX(-50%);
   background:rgba(20,16,10,0.92); border:1px solid var(--line); color:var(--ink);
-  font-size:13px; padding:9px 16px; border-radius:12px; z-index:15; opacity:0; pointer-events:none;
+  font-size:13px; padding:9px 16px; border-radius:12px; z-index:21; opacity:0; pointer-events:none;
   transition:opacity .2s ease; max-width:80vw; text-align:center;
 }
 #toast.show{ opacity:1; }
@@ -238,6 +238,7 @@ input[type=color]::-webkit-color-swatch{ border:none; border-radius:6px; }
 #player.locked #lockOverlay{ display:flex; }
 #player.locked #chrome,
 #player.locked #gestureLayer{ pointer-events:none; }
+#player.locked #chrome *{ pointer-events:none; }
 #unlockBtn{
   display:flex; align-items:center; gap:8px; background:rgba(20,16,10,0.85); color:var(--ink);
   border:1px solid var(--line); padding:12px 20px; border-radius:999px; font-size:13px; font-weight:600;
