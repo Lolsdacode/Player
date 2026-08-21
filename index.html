@@ -15,33 +15,66 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- Icon sprite sheet: real line/glyph icons, no emoji -->
+<svg style="display:none" aria-hidden="true">
+  <symbol id="icon-folder" viewBox="0 0 24 24"><path fill="currentColor" d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6z"/></symbol>
+  <symbol id="icon-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 9V4h5"/><path d="M15 4h5v5"/><path d="M20 15v5h-5"/><path d="M9 20H4v-5"/>
+  </symbol>
+  <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="currentColor"/><path d="M8 11V7a4 4 0 0 1 8 0v4" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="icon-unlock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2" fill="currentColor"/><path d="M8 11V7a4 4 0 0 1 7.6-1.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="icon-skip-back" viewBox="0 0 24 24"><path fill="currentColor" d="M11 19V5l-9 7z"/><path fill="currentColor" d="M21 19V5l-9 7z"/></symbol>
+  <symbol id="icon-skip-forward" viewBox="0 0 24 24"><path fill="currentColor" d="M13 5v14l9-7z"/><path fill="currentColor" d="M3 5v14l9-7z"/></symbol>
+  <symbol id="icon-play" viewBox="0 0 24 24"><path fill="currentColor" d="M8 5v14l11-7z"/></symbol>
+  <symbol id="icon-pause" viewBox="0 0 24 24"><path fill="currentColor" d="M6 5h4v14H6zM14 5h4v14h-4z"/></symbol>
+  <symbol id="icon-volume" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v4h4l5 5V5L7 10H3z"/><path fill="currentColor" d="M14 3.2v2.06A7.5 7.5 0 0 1 19 12a7.5 7.5 0 0 1-5 7.74v2.06A9.5 9.5 0 0 0 21 12 9.5 9.5 0 0 0 14 3.2z"/></symbol>
+  <symbol id="icon-mute" viewBox="0 0 24 24"><path fill="currentColor" d="M3 10v4h4l5 5V5L7 10H3z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M15 9l6 6M21 9l-6 6"/></symbol>
+  <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="currentColor"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.4 1.4M17.6 17.6 19 19M19 5l-1.4 1.4M6.4 17.6 5 19"/></g></symbol>
+  <symbol id="icon-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="M12 3a9 9 0 0 1 0 18z"/></symbol>
+  <symbol id="icon-repeat" viewBox="0 0 24 24"><path fill="currentColor" d="M7 7h10v3l4-4-4-4v3H5v6h2V7z"/><path fill="currentColor" d="M17 17H7v-3l-4 4 4 4v-3h14v-6h-2v4z"/></symbol>
+  <symbol id="icon-music" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3" fill="currentColor"/><circle cx="18" cy="16" r="3" fill="currentColor"/></symbol>
+  <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 9l6 6 6-6"/></symbol>
+</svg>
+
 <div id="app">
 
   <div id="picker">
     <p class="eyebrow">Offline Player</p>
     <h1>Load a file</h1>
     <p>Pick a video or MP3 from your Files app. Nothing is uploaded — it plays straight from your phone, no connection needed.</p>
-    <label class="picker-btn" for="fileInput">📂 Choose File</label>
+    <label class="picker-btn" for="fileInput">
+      <svg class="icon"><use href="#icon-folder"></use></svg> Choose File
+    </label>
     <input type="file" id="fileInput" accept="video/*,audio/*">
   </div>
 
   <div id="player">
-    <video id="video" playsinline webkit-playsinline></video>
+    <video id="video" playsinline webkit-playsinline preload="auto"></video>
     <div id="audioMode">
-      <div id="audioIcon">♪</div>
+      <div id="audioIcon"><svg class="icon" style="width:48px;height:48px;"><use href="#icon-music"></use></svg></div>
       <div id="audioTitle">track.mp3</div>
     </div>
     <div id="gestureLayer"></div>
     <div id="boostRing">2×</div>
     <div id="seekFlash" class="left">-10s</div>
     <div id="seekFlash" class="right" style="display:none">+10s</div>
+    <div id="toast"></div>
+
+    <div id="lockOverlay">
+      <button id="unlockBtn">
+        <svg class="icon" style="width:24px;height:24px;"><use href="#icon-unlock"></use></svg>
+        <span>Tap to unlock</span>
+      </button>
+    </div>
 
     <div id="chrome">
       <div id="topBar">
         <span id="fileName">video.mp4</span>
         <div id="topBtns">
-          <button class="iconBtn" id="fullscreenBtn" title="Fullscreen">⤢</button>
-          <button class="iconBtn" id="changeBtn" title="Choose another file">📂</button>
+          <button class="iconBtn" id="lockBtn" title="Lock screen"><svg class="icon"><use href="#icon-lock"></use></svg></button>
+          <button class="iconBtn" id="fullscreenBtn" title="Fullscreen"><svg class="icon"><use href="#icon-expand"></use></svg></button>
+          <button class="iconBtn" id="changeBtn" title="Choose another file"><svg class="icon"><use href="#icon-folder"></use></svg></button>
         </div>
       </div>
 
@@ -53,31 +86,37 @@
         </div>
 
         <div id="mainControls">
-          <button id="back10">⏪</button>
-          <button id="playPause">▶︎</button>
-          <button id="fwd10">⏩</button>
+          <button id="back10"><svg class="icon lgIcon"><use href="#icon-skip-back"></use></svg></button>
+          <button id="playPause"><svg class="icon lgIcon"><use id="playPauseUse" href="#icon-play"></use></svg></button>
+          <button id="fwd10"><svg class="icon lgIcon"><use href="#icon-skip-forward"></use></svg></button>
         </div>
 
         <div class="groupsScroll">
           <div class="group">
             <p class="eyebrow">Speed</p>
-            <div class="chips" id="speedChips">
-              <button class="chip" data-speed="0.5">.5×</button>
-              <button class="chip active" data-speed="1">1×</button>
-              <button class="chip" data-speed="1.25">1.25×</button>
-              <button class="chip" data-speed="1.5">1.5×</button>
-              <button class="chip" data-speed="2">2×</button>
+            <div class="selectWrap">
+              <select id="speedSelect">
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1× — Normal</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+              <svg class="chevron"><use href="#icon-chevron-down"></use></svg>
             </div>
             <p class="hint">Press &amp; hold anywhere on the video for a temporary 2× boost.</p>
           </div>
 
           <div class="group">
             <p class="eyebrow">Skip Amount</p>
-            <div class="chips" id="skipChips">
-              <button class="chip" data-skip="5">5s</button>
-              <button class="chip active" data-skip="10">10s</button>
-              <button class="chip" data-skip="15">15s</button>
-              <button class="chip" data-skip="30">30s</button>
+            <div class="selectWrap">
+              <select id="skipSelect">
+                <option value="5">5 seconds</option>
+                <option value="10" selected>10 seconds</option>
+                <option value="15">15 seconds</option>
+                <option value="30">30 seconds</option>
+              </select>
+              <svg class="chevron"><use href="#icon-chevron-down"></use></svg>
             </div>
             <p class="hint">Used by the skip buttons and double-tapping the edges of the screen.</p>
           </div>
@@ -85,21 +124,21 @@
           <div class="group">
             <p class="eyebrow">Volume</p>
             <div class="miniRow">
-              <span class="miniLabel">🔈</span>
+              <svg class="icon smallIcon"><use href="#icon-volume"></use></svg>
               <input type="range" id="volume" min="0" max="1" step="0.01" value="1">
             </div>
-            <button class="toggleBtn" id="muteBtn">Mute</button>
+            <button class="toggleBtn" id="muteBtn"><svg class="icon smallIcon"><use id="muteUse" href="#icon-volume"></use></svg><span>Mute</span></button>
             <p class="hint">iPhone locks this to your hardware buttons — this slider mainly helps on desktop.</p>
           </div>
 
           <div class="group">
             <p class="eyebrow">Exposure</p>
             <div class="miniRow">
-              <span class="miniLabel">☀︎</span>
+              <svg class="icon smallIcon"><use href="#icon-sun"></use></svg>
               <input type="range" id="brightness" min="50" max="200" value="100">
             </div>
             <div class="miniRow">
-              <span class="miniLabel">◑</span>
+              <svg class="icon smallIcon"><use href="#icon-contrast"></use></svg>
               <input type="range" id="contrast" min="50" max="150" value="100">
             </div>
             <p class="hint">Adjusts the picture itself, not your screen's hardware brightness.</p>
@@ -107,7 +146,7 @@
 
           <div class="group">
             <p class="eyebrow">Loop</p>
-            <button class="toggleBtn" id="loopBtn">Off</button>
+            <button class="toggleBtn" id="loopBtn"><svg class="icon smallIcon"><use href="#icon-repeat"></use></svg><span>Off</span></button>
           </div>
         </div>
       </div>

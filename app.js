@@ -1,5 +1,3 @@
-// Register the service worker so the app keeps working with no connection
-// after the very first visit.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js').catch(() => {});
@@ -13,16 +11,17 @@ if ('serviceWorker' in navigator) {
   const chrome = $('chrome'), gestureLayer = $('gestureLayer');
   const boostRing = $('boostRing');
   const seek = $('seek'), timeCur = $('timeCur'), timeDur = $('timeDur');
-  const playPauseBtn = $('playPause');
-  const speedChips = document.querySelectorAll('#speedChips .chip');
-  const volumeSlider = $('volume'), muteBtn = $('muteBtn');
+  const playPauseBtn = $('playPause'), playPauseUse = $('playPauseUse');
+  const speedSelect = $('speedSelect'), skipSelect = $('skipSelect');
+  const volumeSlider = $('volume'), muteBtn = $('muteBtn'), muteUse = $('muteUse');
   const brightnessSlider = $('brightness'), contrastSlider = $('contrast');
   const loopBtn = $('loopBtn');
   const fullscreenBtn = $('fullscreenBtn'), changeBtn = $('changeBtn');
   const flashes = document.querySelectorAll('#seekFlash');
   const flashLeft = flashes[0], flashRight = flashes[1];
-  const skipChips = document.querySelectorAll('#skipChips .chip');
   const audioMode = $('audioMode'), audioTitle = $('audioTitle');
+  const toast = $('toast');
+  const lockBtn = $('lockBtn'), unlockBtn = $('unlockBtn');
 
   let baseRate = 1;
   let skipSeconds = 10;
@@ -30,13 +29,22 @@ if ('serviceWorker' in navigator) {
   let hideTimer = null;
   let holdTimer = null;
   let isHolding = false;
+  let isLocked = false;
   let pointerDownTime = 0;
+  let toastTimer = null;
 
   function fmt(s){
     if(!isFinite(s)) return '0:00';
     s = Math.max(0, Math.floor(s));
     const m = Math.floor(s/60), sec = s%60;
     return m + ':' + String(sec).padStart(2,'0');
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
   }
 
   function loadSettings(){
@@ -47,10 +55,7 @@ if ('serviceWorker' in navigator) {
       if(s.brightness) brightnessSlider.value = s.brightness;
       if(s.contrast) contrastSlider.value = s.contrast;
       if(s.volume !== undefined) volumeSlider.value = s.volume;
-      if(s.skipSeconds){
-        skipSeconds = s.skipSeconds;
-        skipChips.forEach(c => c.classList.toggle('active', parseFloat(c.dataset.skip) === skipSeconds));
-      }
+      if(s.skipSeconds){ skipSeconds = s.skipSeconds; skipSelect.value = String(skipSeconds); }
       applyFilter();
     }catch(e){}
   }
@@ -69,30 +74,38 @@ if ('serviceWorker' in navigator) {
 
   fileInput.addEventListener('change', e => {
     const file = e.target.files[0];
-    if(!file) return;
+    if(!file){ return; }
     const url = URL.createObjectURL(file);
+    video.pause();
     video.src = url;
     fileName.textContent = file.name;
     picker.style.display = 'none';
     playerEl.classList.add('active');
 
-    const isAudio = file.type.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac)$/i.test(file.name);
+    const isAudio = file.type.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(file.name);
     audioMode.classList.toggle('active', isAudio);
     audioTitle.textContent = file.name;
 
     loadSettings();
     video.volume = parseFloat(volumeSlider.value);
-    video.play().catch(()=>{});
+    video.load();
+    video.play().catch(() => showToast('Tap ▶ to start playback'));
+
+    // Reset so choosing the same file again (or a new one) always fires 'change'
+    e.target.value = '';
   });
 
   changeBtn.addEventListener('click', () => fileInput.click());
 
+  video.addEventListener('error', () => showToast('Could not play this file — format may be unsupported'));
+
   // Play / pause
   function togglePlay(){
-    if(video.paused){ video.play(); } else { video.pause(); }
+    if(video.paused){ video.play().catch(() => showToast('Tap ▶ to start playback')); }
+    else { video.pause(); }
   }
-  video.addEventListener('play', () => { playPauseBtn.textContent = '❚❚'; scheduleHide(); });
-  video.addEventListener('pause', () => { playPauseBtn.textContent = '▶︎'; showChrome(); });
+  video.addEventListener('play', () => { playPauseUse.setAttribute('href', '#icon-pause'); scheduleHide(); });
+  video.addEventListener('pause', () => { playPauseUse.setAttribute('href', '#icon-play'); showChrome(); });
   playPauseBtn.addEventListener('click', togglePlay);
 
   // Time / seek
@@ -125,36 +138,28 @@ if ('serviceWorker' in navigator) {
   $('back10').addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime-skipSeconds); flash(flashLeft, '-'+skipSeconds+'s'); });
   $('fwd10').addEventListener('click', () => { video.currentTime = Math.min(video.duration||0, video.currentTime+skipSeconds); flash(flashRight, '+'+skipSeconds+'s'); });
 
-  skipChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      skipChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      skipSeconds = parseFloat(chip.dataset.skip);
-      saveSettings();
-    });
+  skipSelect.addEventListener('change', () => {
+    skipSeconds = parseFloat(skipSelect.value);
+    saveSettings();
   });
 
-  // Speed chips
-  speedChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      speedChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      baseRate = parseFloat(chip.dataset.speed);
-      video.playbackRate = baseRate;
-    });
+  speedSelect.addEventListener('change', () => {
+    baseRate = parseFloat(speedSelect.value);
+    video.playbackRate = baseRate;
   });
 
   // Volume / mute
   volumeSlider.addEventListener('input', () => {
     video.volume = parseFloat(volumeSlider.value);
     video.muted = false;
-    muteBtn.classList.remove('on'); muteBtn.textContent = 'Mute';
+    muteBtn.classList.remove('on');
+    muteUse.setAttribute('href', '#icon-volume');
     saveSettings();
   });
   muteBtn.addEventListener('click', () => {
     video.muted = !video.muted;
     muteBtn.classList.toggle('on', video.muted);
-    muteBtn.textContent = video.muted ? 'Muted' : 'Mute';
+    muteUse.setAttribute('href', video.muted ? '#icon-mute' : '#icon-volume');
   });
 
   // Brightness / contrast
@@ -165,17 +170,34 @@ if ('serviceWorker' in navigator) {
   loopBtn.addEventListener('click', () => {
     video.loop = !video.loop;
     loopBtn.classList.toggle('on', video.loop);
-    loopBtn.textContent = video.loop ? 'On' : 'Off';
+    loopBtn.querySelector('span').textContent = video.loop ? 'On' : 'Off';
   });
 
   // Fullscreen
   fullscreenBtn.addEventListener('click', () => {
-    if(video.webkitEnterFullscreen){ video.webkitEnterFullscreen(); }
-    else if(playerEl.requestFullscreen){ playerEl.requestFullscreen(); }
+    try{
+      if(video.webkitEnterFullscreen){ video.webkitEnterFullscreen(); }
+      else if(playerEl.requestFullscreen){ playerEl.requestFullscreen().catch(() => showToast('Fullscreen not supported here')); }
+      else{ showToast('Fullscreen not supported here'); }
+    }catch(err){ showToast('Fullscreen not supported here'); }
+  });
+
+  // Lock screen
+  lockBtn.addEventListener('click', () => {
+    isLocked = true;
+    playerEl.classList.add('locked');
+    chrome.classList.add('hidden');
+    clearTimeout(hideTimer);
+  });
+  unlockBtn.addEventListener('click', () => {
+    isLocked = false;
+    playerEl.classList.remove('locked');
+    showChrome();
   });
 
   // Chrome show/hide
   function showChrome(){
+    if(isLocked) return;
     chrome.classList.remove('hidden');
     clearTimeout(hideTimer);
     if(!video.paused){
@@ -187,6 +209,7 @@ if ('serviceWorker' in navigator) {
   // Gesture layer: tap to toggle chrome/play, double-tap sides to seek, hold to boost speed
   let lastTap = 0;
   gestureLayer.addEventListener('pointerdown', e => {
+    if(isLocked) return;
     pointerDownTime = Date.now();
     holdTimer = setTimeout(() => {
       isHolding = true;
@@ -206,6 +229,7 @@ if ('serviceWorker' in navigator) {
   }
 
   gestureLayer.addEventListener('pointerup', e => {
+    if(isLocked) return;
     const heldFor = Date.now() - pointerDownTime;
     const wasHolding = isHolding;
     endHold();
