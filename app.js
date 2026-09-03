@@ -25,6 +25,9 @@ if ('serviceWorker' in navigator) {
   const toast = $('toast');
   const lockBtn = $('lockBtn'), unlockBtn = $('unlockBtn');
   const settingsBtn = $('settingsBtn'), settingsClose = $('settingsClose');
+  const playlistBtn = $('playlistBtn'), playlistClose = $('playlistClose');
+  const playlistPanel = $('playlistPanel'), playlistBackdrop = $('playlistBackdrop');
+  const playlistBody = $('playlistBody'), addToQueueBtn = $('addToQueueBtn');
   const settingsPanel = $('settingsPanel'), settingsBackdrop = $('settingsBackdrop');
   const resetExposureBtn = $('resetExposureBtn');
   const accentColor = $('accentColor'), accentColorLabel = $('accentColorLabel'), resetAccentBtn = $('resetAccentBtn');
@@ -94,31 +97,123 @@ if ('serviceWorker' in navigator) {
     video.style.filter = `brightness(${brightnessSlider.value}%) contrast(${contrastSlider.value}%)`;
   }
 
-  fileInput.addEventListener('change', e => {
-    const file = e.target.files[0];
-    if(!file){ return; }
-    const url = URL.createObjectURL(file);
+  // ---------- Playlist ----------
+  let playlist = [];       // [{file: File}]
+  let currentIndex = -1;
+  let currentObjectUrl = null;
+  let pendingAppend = false;
+
+  function isAudioFile(file){
+    return file.type.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(file.name);
+  }
+
+  function renderPlaylist(){
+    playlistBody.innerHTML = '';
+    playlist.forEach((item, i) => {
+      const row = document.createElement('div');
+      row.className = 'playlistRow' + (i === currentIndex ? ' current' : '');
+
+      const idx = document.createElement('span');
+      idx.className = 'plIndex';
+      idx.textContent = (i+1) + '.';
+
+      const name = document.createElement('span');
+      name.className = 'plName';
+      name.textContent = item.file.name;
+      name.addEventListener('click', () => loadTrack(i));
+
+      const remove = document.createElement('button');
+      remove.className = 'plRemove';
+      remove.textContent = '×';
+      remove.addEventListener('click', ev => { ev.stopPropagation(); removeFromPlaylist(i); });
+
+      row.appendChild(idx);
+      row.appendChild(name);
+      row.appendChild(remove);
+      playlistBody.appendChild(row);
+    });
+  }
+
+  function loadTrack(index){
+    if(index < 0 || index >= playlist.length) return;
+    currentIndex = index;
+    const file = playlist[index].file;
+
+    if(currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
+    currentObjectUrl = URL.createObjectURL(file);
+
     video.pause();
-    video.src = url;
-    fileName.textContent = file.name;
-    picker.style.display = 'none';
-    playerEl.classList.add('active');
+    video.src = currentObjectUrl;
     resetZoom();
 
-    const isAudio = file.type.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac|ogg)$/i.test(file.name);
-    audioMode.classList.toggle('active', isAudio);
+    const audio = isAudioFile(file);
+    audioMode.classList.toggle('active', audio);
     audioTitle.textContent = file.name;
 
-    loadSettings();
+    const posLabel = playlist.length > 1 ? ` (${index+1}/${playlist.length})` : '';
+    fileName.textContent = file.name + posLabel;
+
+    picker.style.display = 'none';
+    playerEl.classList.add('active');
+
     video.volume = parseFloat(volumeSlider.value);
     video.load();
     video.play().catch(() => showToast('Tap ▶ to start playback'));
 
-    // Reset so choosing the same file again (or a new one) always fires 'change'
-    e.target.value = '';
+    renderPlaylist();
+  }
+
+  function removeFromPlaylist(i){
+    const wasCurrent = i === currentIndex;
+    playlist.splice(i, 1);
+
+    if(playlist.length === 0){
+      currentIndex = -1;
+      if(currentObjectUrl){ URL.revokeObjectURL(currentObjectUrl); currentObjectUrl = null; }
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+      playerEl.classList.remove('active');
+      picker.style.display = 'flex';
+      closePlaylist();
+      return;
+    }
+
+    if(i < currentIndex){ currentIndex--; renderPlaylist(); }
+    else if(wasCurrent){ loadTrack(Math.min(i, playlist.length - 1)); }
+    else{ renderPlaylist(); }
+  }
+
+  video.addEventListener('ended', () => {
+    if(video.loop) return;
+    if(currentIndex < playlist.length - 1){ loadTrack(currentIndex + 1); }
   });
 
-  changeBtn.addEventListener('click', () => fileInput.click());
+  function openPlaylist(){ clearTimeout(hideTimer); playlistPanel.classList.add('open'); }
+  function closePlaylist(){ playlistPanel.classList.remove('open'); showChrome(); }
+  playlistBtn.addEventListener('click', openPlaylist);
+  playlistClose.addEventListener('click', closePlaylist);
+  playlistBackdrop.addEventListener('click', closePlaylist);
+  addToQueueBtn.addEventListener('click', () => { pendingAppend = true; fileInput.click(); });
+
+  fileInput.addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // reset so picking the same file(s) again still fires 'change'
+    if(files.length === 0) return;
+
+    if(pendingAppend){
+      pendingAppend = false;
+      files.forEach(f => playlist.push({file: f}));
+      renderPlaylist();
+      showToast(files.length > 1 ? `Added ${files.length} songs to the queue` : 'Added to the queue');
+      return;
+    }
+
+    playlist = files.map(f => ({file: f}));
+    loadTrack(0);
+  });
+
+  changeBtn.addEventListener('click', () => { pendingAppend = false; fileInput.click(); });
 
   video.addEventListener('error', () => showToast('Could not play this file — format may be unsupported'));
 

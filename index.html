@@ -38,6 +38,7 @@
   <symbol id="icon-settings" viewBox="0 0 24 24"><path fill="currentColor" d="M19.4 13a7.4 7.4 0 0 0 .1-1 7.4 7.4 0 0 0-.1-1l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.4a.5.5 0 0 0-.6-.2l-2.5 1a7.6 7.6 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.4a.5.5 0 0 0 .1.6L4.5 11a7.4 7.4 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.4a.5.5 0 0 0 .6.2l2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6a.5.5 0 0 0 .5.4h4a.5.5 0 0 0 .5-.4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1a.5.5 0 0 0 .6-.2l2-3.4a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></symbol>
   <symbol id="icon-close" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="icon-reset" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></symbol>
+  <symbol id="icon-playlist" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M3 6h11M3 12h11M3 18h7"/><path fill="currentColor" d="M16 9l6 3-6 3z"/></symbol>
 </svg>
 
 <div id="app">
@@ -45,11 +46,11 @@
   <div id="picker">
     <p class="eyebrow">Offline Player</p>
     <h1>Load a file</h1>
-    <p>Pick a video or MP3 from your Files app. Nothing is uploaded — it plays straight from your phone, no connection needed.</p>
+    <p>Pick one or more videos or MP3s from your Files app to build a playlist. Nothing is uploaded — it plays straight from your phone, no connection needed.</p>
     <label class="picker-btn" for="fileInput">
       <svg class="icon"><use href="#icon-folder"></use></svg> Choose File
     </label>
-    <input type="file" id="fileInput" accept="video/*,audio/*,.mp3,.m4a,.wav,.aac,.flac,.ogg,.mov,.mp4">
+    <input type="file" id="fileInput" multiple accept="video/*,audio/*,.mp3,.m4a,.wav,.aac,.flac,.ogg,.mov,.mp4">
   </div>
 
   <div id="player">
@@ -76,10 +77,11 @@
       <div id="topBar">
         <span id="fileName">video.mp4</span>
         <div id="topBtns">
+          <button class="iconBtn" id="playlistBtn" title="Playlist"><svg class="icon"><use href="#icon-playlist"></use></svg></button>
           <button class="iconBtn" id="settingsBtn" title="Settings"><svg class="icon"><use href="#icon-settings"></use></svg></button>
           <button class="iconBtn" id="lockBtn" title="Lock screen"><svg class="icon"><use href="#icon-lock"></use></svg></button>
           <button class="iconBtn" id="fullscreenBtn" title="Fullscreen"><svg class="icon"><use href="#icon-expand"></use></svg></button>
-          <button class="iconBtn" id="changeBtn" title="Choose another file"><svg class="icon"><use href="#icon-folder"></use></svg></button>
+          <button class="iconBtn" id="changeBtn" title="Start a new selection"><svg class="icon"><use href="#icon-folder"></use></svg></button>
         </div>
       </div>
 
@@ -177,6 +179,21 @@
             <button class="toggleBtn" id="resetAccentBtn"><svg class="icon smallIcon"><use href="#icon-reset"></use></svg><span>Reset to default</span></button>
           </div>
 
+        </div>
+      </div>
+    </div>
+
+    <div id="playlistPanel">
+      <div id="playlistBackdrop"></div>
+      <div id="playlistSheet">
+        <div id="playlistHeader">
+          <span>Playlist</span>
+          <button class="iconBtn" id="playlistClose"><svg class="icon"><use href="#icon-close"></use></svg></button>
+        </div>
+        <div id="playlistBody"></div>
+        <p class="hint" id="playlistHint">Tap a song to jump to it. When one ends, the next plays automatically.</p>
+        <div id="playlistFooter">
+          <button class="toggleBtn" id="addToQueueBtn"><svg class="icon smallIcon"><use href="#icon-folder"></use></svg><span>Add More Songs</span></button>
         </div>
       </div>
     </div>
