@@ -46,11 +46,11 @@
   <div id="picker">
     <p class="eyebrow">Offline Player</p>
     <h1>Load a file</h1>
-    <p>Pick one or more videos or MP3s from your Files app to build a playlist. Nothing is uploaded — it plays straight from your phone, no connection needed.</p>
+    <p>Pick a video or MP3 from your Files app. Once it's playing, use the Playlist button to add more and build a queue.</p>
     <label class="picker-btn" for="fileInput">
       <svg class="icon"><use href="#icon-folder"></use></svg> Choose File
     </label>
-    <input type="file" id="fileInput" multiple accept="video/*,audio/*,.mp3,.m4a,.wav,.aac,.flac,.ogg,.mov,.mp4">
+    <input type="file" id="fileInput" accept="video/*,audio/*,.mp3,.m4a,.wav,.aac,.flac,.ogg,.mov,.mp4">
   </div>
 
   <div id="player">
@@ -81,7 +81,6 @@
           <button class="iconBtn" id="settingsBtn" title="Settings"><svg class="icon"><use href="#icon-settings"></use></svg></button>
           <button class="iconBtn" id="lockBtn" title="Lock screen"><svg class="icon"><use href="#icon-lock"></use></svg></button>
           <button class="iconBtn" id="fullscreenBtn" title="Fullscreen"><svg class="icon"><use href="#icon-expand"></use></svg></button>
-          <button class="iconBtn" id="changeBtn" title="Start a new selection"><svg class="icon"><use href="#icon-folder"></use></svg></button>
         </div>
       </div>
 
@@ -194,6 +193,7 @@
         <p class="hint" id="playlistHint">Tap a song to jump to it. When one ends, the next plays automatically.</p>
         <div id="playlistFooter">
           <button class="toggleBtn" id="addToQueueBtn"><svg class="icon smallIcon"><use href="#icon-folder"></use></svg><span>Add More Songs</span></button>
+          <button class="toggleBtn" id="startOverBtn"><svg class="icon smallIcon"><use href="#icon-reset"></use></svg><span>Start Over</span></button>
         </div>
       </div>
     </div>

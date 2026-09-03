@@ -18,7 +18,7 @@ if ('serviceWorker' in navigator) {
   const volumeSlider = $('volume'), muteBtn = $('muteBtn'), muteUse = $('muteUse');
   const brightnessSlider = $('brightness'), contrastSlider = $('contrast');
   const loopBtn = $('loopBtn');
-  const fullscreenBtn = $('fullscreenBtn'), changeBtn = $('changeBtn');
+  const fullscreenBtn = $('fullscreenBtn');
   const flashes = document.querySelectorAll('#seekFlash');
   const flashLeft = flashes[0], flashRight = flashes[1];
   const audioMode = $('audioMode'), audioTitle = $('audioTitle');
@@ -213,7 +213,12 @@ if ('serviceWorker' in navigator) {
     loadTrack(0);
   });
 
-  changeBtn.addEventListener('click', () => { pendingAppend = false; fileInput.click(); });
+  const startOverBtn = $('startOverBtn');
+  startOverBtn.addEventListener('click', () => {
+    if(playlist.length > 0 && !confirm('Replace your current playlist with a new pick?')) return;
+    pendingAppend = false;
+    fileInput.click();
+  });
 
   video.addEventListener('error', () => showToast('Could not play this file — format may be unsupported'));
 
