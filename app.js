@@ -19,6 +19,8 @@ if ('serviceWorker' in navigator) {
   const brightnessSlider = $('brightness'), contrastSlider = $('contrast');
   const loopBtn = $('loopBtn');
   const fullscreenBtn = $('fullscreenBtn');
+  const pipBtn = $('pipBtn');
+  const pitchToggleBtn = $('pitchToggleBtn');
   const flashes = document.querySelectorAll('#seekFlash');
   const flashLeft = flashes[0], flashRight = flashes[1];
   const audioMode = $('audioMode'), audioTitle = $('audioTitle');
@@ -34,6 +36,7 @@ if ('serviceWorker' in navigator) {
 
   let baseRate = 1;
   let skipSeconds = 10;
+  let preservePitch = true;
   let hideTimer = null;
   let holdTimer = null;
   let isHolding = false;
@@ -80,6 +83,11 @@ if ('serviceWorker' in navigator) {
       if(s.volume !== undefined) volumeSlider.value = s.volume;
       if(s.skipSeconds){ skipSeconds = s.skipSeconds; skipSelect.value = String(skipSeconds); }
       if(s.accent){ applyAccent(s.accent); }
+      if(s.preservePitch !== undefined){
+        preservePitch = s.preservePitch;
+        pitchToggleBtn.classList.toggle('on', !preservePitch);
+        pitchToggleBtn.querySelector('span').textContent = preservePitch ? 'Normal Pitch' : 'Pitch Follows Speed';
+      }
       applyFilter();
     }catch(e){}
   }
@@ -87,7 +95,7 @@ if ('serviceWorker' in navigator) {
     try{
       localStorage.setItem('offlinePlayerSettings', JSON.stringify({
         brightness: brightnessSlider.value, contrast: contrastSlider.value, volume: volumeSlider.value,
-        skipSeconds: skipSeconds, accent: accentColor.value
+        skipSeconds: skipSeconds, accent: accentColor.value, preservePitch: preservePitch
       }));
     }catch(e){}
   }
@@ -158,6 +166,8 @@ if ('serviceWorker' in navigator) {
 
     video.volume = parseFloat(volumeSlider.value);
     video.load();
+    video.playbackRate = baseRate;
+    applyPreservePitch();
     video.play().catch(() => showToast('Tap ▶ to start playback'));
 
     renderPlaylist();
@@ -294,6 +304,19 @@ if ('serviceWorker' in navigator) {
     video.playbackRate = baseRate;
   });
 
+  function applyPreservePitch(){
+    video.preservesPitch = preservePitch;
+    video.webkitPreservesPitch = preservePitch; // older Safari
+    video.mozPreservesPitch = preservePitch;    // harmless elsewhere
+  }
+  pitchToggleBtn.addEventListener('click', () => {
+    preservePitch = !preservePitch;
+    applyPreservePitch();
+    pitchToggleBtn.classList.toggle('on', !preservePitch);
+    pitchToggleBtn.querySelector('span').textContent = preservePitch ? 'Normal Pitch' : 'Pitch Follows Speed';
+    saveSettings();
+  });
+
   // Volume / mute
   volumeSlider.addEventListener('input', () => {
     video.volume = parseFloat(volumeSlider.value);
@@ -342,6 +365,34 @@ if ('serviceWorker' in navigator) {
       else if(playerEl.requestFullscreen){ playerEl.requestFullscreen().catch(() => showToast('Fullscreen not supported here')); }
       else{ showToast('Fullscreen not supported here'); }
     }catch(err){ showToast('Fullscreen not supported here'); }
+  });
+
+  // Picture-in-Picture
+  if(!('pictureInPictureEnabled' in document) && !video.webkitSupportsPresentationMode){
+    pipBtn.style.display = 'none';
+  }
+  pipBtn.addEventListener('click', async () => {
+    try{
+      if(document.pictureInPictureElement){
+        await document.exitPictureInPicture();
+        return;
+      }
+      if(audioMode.classList.contains('active')){
+        showToast('Picture-in-Picture needs a video, not audio');
+        return;
+      }
+      if(video.requestPictureInPicture){
+        await video.requestPictureInPicture();
+      } else if(video.webkitSetPresentationMode){
+        video.webkitSetPresentationMode(
+          video.webkitPresentationMode === 'picture-in-picture' ? 'inline' : 'picture-in-picture'
+        );
+      } else {
+        showToast('Picture-in-Picture not supported here');
+      }
+    }catch(err){
+      showToast('Picture-in-Picture not supported here');
+    }
   });
 
   // Lock screen
